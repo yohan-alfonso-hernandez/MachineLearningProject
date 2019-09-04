@@ -1,0 +1,128 @@
+---
+title: "MachineLearningProject"
+author: "yohan"
+date: "30 de agosto de 2019"
+output: html_document
+---
+---
+title: "Machine Learning Project"
+author: "yohan"
+date: "30 de agosto de 2019"
+output: html_document
+---
+#Summary
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.
+
+##Objective:
+Goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+Predict the outcome of the variable classe in the training set.
+
+###Set of libraries
+```{r libraries, include=TRUE}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(rattle)
+library(knitr)
+library(dplyr) 
+```
+
+###Load Data
+```{r Read  Data, include=TRUE}
+Train <- read.csv(file='pml-training.csv', header = TRUE, sep = ',',na.strings=c( "", "#DIV/0!","NA"))
+Test <- read.csv(file='pml-testing.csv', header = TRUE, sep = ',' ,na.strings=c( "", "#DIV/0!","NA"))
+```
+
+###dimention of sets of Data
+```{r dim Data, include=TRUE}
+dim(Train)
+dim(Test)
+```
+Dimentions of trainning data are Rows=19622 columns=160
+esting data =  Rows = 20 columns=160
+
+###Clean Data
+If we make a summary rain and Test we can see a lot NA data so we have to clean
+Changin NA BY 0
+
+```{r Clean Data, include=TRUE}
+Train[is.na(Train)] <- 0
+Test[is.na(Test)] <- 0
+```
+
+
+Dataset with 5 classes (sitting-down, standing-up, standing, walking, and sitting) collected on 8 hours of activities of 4 healthy subjects
+```{r Summary variable Classe, include=TRUE}
+summary(Train$classe)
+
+```
+
+### Lets selects variables that are useful
+```{r select  variable , include=TRUE}
+Train <- select(Train,(8:160))
+Test <- select(Test,(8:160))
+```
+
+### Lests takeout de columns with "total" since might be dirty data for the porpouse.
+```{r Total Values out , include=TRUE}
+CleanTrain <-  select (Train, -"total_accel_belt", -"total_accel_arm", -"total_accel_dumbbell", -"total_accel_forearm")
+CleanTest <- select (Test, -"total_accel_belt", -"total_accel_arm", -"total_accel_dumbbell", -"total_accel_forearm")
+```
+
+### Partitioning of Data
+```{r Partitioning of Data , include=TRUE}
+Traini<-createDataPartition(y=CleanTrain$classe, p=0.75, list=FALSE)
+Trainsub<-CleanTrain[Traini,]
+Testsub<-CleanTrain[-Traini,]
+```
+
+###dimention of sets of subData
+```{r dim subData, include=TRUE}
+dim(Trainsub)
+dim(Testsub)
+```
+
+##Decision Tree
+```{r Decision Tree train , include=TRUE}
+set.seed(2019)
+Treefit <- rpart(classe ~ ., data=Trainsub, method="class")
+fancyRpartPlot(Treefit)
+```
+###Lets predict with decision tree
+```{r Decision Tree prediction , include=TRUE}
+set.seed(2019)
+Treefitest <- predict(Treefit, Testsub, type = "class")
+confusionMatrix(Treefitest,Testsub$classe)
+```
+This method result in a Accuracy : 0.7612  and a error rate: 0.53%, so lets try with another one.
+
+
+##Ramdon forest Train
+```{r Ramdon forest train , include=TRUE}
+Forestfitrain <- randomForest(classe ~ ., data=Trainsub)
+Forestfitrain
+```
+
+```{r plot error  , include=TRUE}
+plot(Forestfitrain)
+```
+In this graphic we cn see the error, is not precisly under 0,05 as I hoped but the accuracy is over 99,5%
+
+```{r Ramdon forest prediction , include=TRUE}
+predforest <- predict(Forestfitrain, Testsub, type = "class")
+Pred <- confusionMatrix(predforest, Testsub$classe)
+Pred
+```
+This method is Accuracy : 0.9955  although error is above 0,05
+random forest is a better model than Clasiification Trees model
+
+### Let make a prediction with the data delivered at the begining of the exercise
+```{r prediction with testing  , include=TRUE}
+
+finalPred <- predict(Forestfitrain, CleanTest, type = "class")
+finalPred
+```
+
+it has been successfully predicted the outcome of the test data using random forest model used on inicial training data with 99.55% of accuracy 
+
